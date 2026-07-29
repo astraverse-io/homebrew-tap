@@ -1,0 +1,133 @@
+name: Update cask
+
+# Keeps Casks/kubeastra.rb pointed at the latest KubeAstra desktop release.
+#
+# Triggered two ways:
+#   1. repository_dispatch from the KubeAstra release workflow, which sends
+#      {"event_type": "kubeastra-release", "client_payload": {"version": "1.2.3"}}
+#      after the signed artifacts are attached to the release.
+#   2. workflow_dispatch, for manual re-runs / backfills.
+#
+# The job is idempotent: re-running it for the same version rewrites identical
+# content and the commit step no-ops.
+
+on:
+  repository_dispatch:
+    types: [kubeastra-release]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without the desktop-v prefix (e.g. 1.2.3)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        run: |
+          VERSION="${{ github.event.inputs.version || github.event.client_payload.version }}"
+          VERSION="${VERSION#desktop-v}"
+          VERSION="${VERSION#v}"
+          if [ -z "$VERSION" ]; then
+            echo "::error::No version supplied"
+            exit 1
+          fi
+          # Guard against a malformed dispatch payload reaching the sed below.
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+(\.[0-9]+)+$'; then
+            echo "::error::Version '$VERSION' is not a dotted numeric version"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Download release artifacts and checksum them
+        id: sums
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BASE: https://github.com/astraverse-io/KubeAstra/releases/download
+        run: |
+          set -euo pipefail
+          fetch_sha () {
+            local file="$1"
+            local url="$BASE/desktop-v$VERSION/$file"
+            if ! curl -fsSL --retry 3 -o "$file" "$url"; then
+              echo "::warning::$file not published for desktop-v$VERSION"
+              return 1
+            fi
+            shasum -a 256 "$file" | cut -d' ' -f1
+          }
+
+          if ARM_SHA=$(fetch_sha "KubeAstra_${VERSION}_aarch64.dmg"); then
+            echo "arm=$ARM_SHA" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::arm64 DMG is required"
+            exit 1
+          fi
+
+          # Intel is optional — the x64 lane may be dropped (see the cask).
+          if INTEL_SHA=$(fetch_sha "KubeAstra_${VERSION}_x64.dmg"); then
+            echo "intel=$INTEL_SHA" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Rewrite cask
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          ARM_SHA: ${{ steps.sums.outputs.arm }}
+          INTEL_SHA: ${{ steps.sums.outputs.intel }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          path = Path("Casks/kubeastra.rb")
+          text = path.read_text()
+
+          version = os.environ["VERSION"]
+          text = re.sub(r'^  version "[^"]*"$',
+                        f'  version "{version}"',
+                        text, count=1, flags=re.M)
+
+          def set_sha(block: str, sha: str, body: str) -> str:
+              """Replace the sha256 line inside `on_arm do` / `on_intel do`."""
+              pattern = re.compile(
+                  rf'(on_{block} do\n)(\s*)sha256 [^\n]*', re.M
+              )
+              return pattern.sub(rf'\1\g<2>sha256 "{sha}"', body, count=1)
+
+          text = set_sha("arm", os.environ["ARM_SHA"], text)
+          intel = os.environ.get("INTEL_SHA")
+          if intel:
+              text = set_sha("intel", intel, text)
+
+          # Drop the pre-release warning once a real version is pinned.
+          text = text.replace(
+              "# NOT YET INSTALLABLE: the first signed DMG ships with desktop Phase 2. Until\n"
+              "# then `version` is a placeholder and `brew install` will fail on checksum.\n",
+              "",
+          )
+          path.write_text(text)
+          PY
+          echo "--- updated cask ---"
+          head -30 Casks/kubeastra.rb
+
+      - name: Commit
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if git diff --quiet; then
+            echo "Cask already up to date for $VERSION"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "kubeastra $VERSION"
+          git push
