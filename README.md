@@ -12,8 +12,20 @@ projects.
 
 ```bash
 brew tap astraverse-io/tap
+brew trust astraverse-io/tap     # Homebrew 6+ requires this for third-party taps
 brew install --cask kubeastra
 ```
+
+The `brew trust` step is Homebrew's safeguard for taps outside the official
+catalog — without it you get
+`Error: Refusing to load cask … from untrusted tap`. Trusting a tap means you
+are allowing code from this repository to run during installs, so it is worth
+[reading the cask](Casks/kubeastra.rb) first; it is 50 lines and does nothing
+but download the signed DMG from the KubeAstra releases page. Reverse it any
+time with `brew untrust astraverse-io/tap`.
+
+This requirement disappears if KubeAstra is later accepted into the official
+homebrew-cask catalog.
 
 After tapping once, KubeAstra behaves like any other cask:
 
