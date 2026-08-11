@@ -4,13 +4,11 @@
 # the KubeAstra release workflow triggers on each `desktop-v*` tag. Editing
 # them by hand is fine but usually unnecessary.
 #
-# NOT YET INSTALLABLE: the first signed DMG ships with desktop Phase 2. Until
-# then `version` is a placeholder and `brew install` will fail on checksum.
 cask "kubeastra" do
-  version "0.0.0"
+  version "0.2.0"
 
   on_arm do
-    sha256 :no_check
+    sha256 "2ceb2d6709fe787d7c38f5d739b6a135d95526997337db58506e9cb9cb44b8d8"
 
     url "https://github.com/astraverse-io/KubeAstra/releases/download/desktop-v#{version}/KubeAstra_#{version}_aarch64.dmg",
         verified: "github.com/astraverse-io/KubeAstra/"
