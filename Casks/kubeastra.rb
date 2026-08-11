@@ -1,8 +1,11 @@
 # KubeAstra desktop app.
 #
-# version/sha256 are maintained by .github/workflows/update-cask.yml. It is
-# NOT yet triggered automatically — KubeAstra's release workflow sends no
-# repository_dispatch, so run it by hand after each desktop release:
+# version/sha256 are maintained by .github/workflows/update-cask.yml, which
+# KubeAstra's update-homebrew-cask.yml triggers when a desktop release is
+# PUBLISHED — not when its tag is built, because that release is still a
+# draft and its assets are not downloadable yet.
+#
+# To re-run by hand:
 #   gh workflow run update-cask.yml --repo astraverse-io/homebrew-tap \
 #     -f version=<x.y.z>
 #
