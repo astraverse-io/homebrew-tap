@@ -3,10 +3,9 @@
 Homebrew formulae and casks for [Astraverse](https://github.com/astraverse-io)
 projects.
 
-> **Status: not yet installable.** The KubeAstra desktop app ships its first
-> signed build with desktop Phase 2. This tap is scaffolded ahead of that
-> release; `brew install` will fail until the first `desktop-v*` release
-> exists.
+> **Status: installable.** KubeAstra Desktop 0.2.0 is signed by Apple and
+> notarized, so macOS opens it without a Gatekeeper warning. Apple silicon
+> and macOS 11+ only — there is no Intel build.
 
 ## Install
 

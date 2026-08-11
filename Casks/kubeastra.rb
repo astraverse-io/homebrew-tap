@@ -1,25 +1,20 @@
 # KubeAstra desktop app.
 #
-# version/sha256 are maintained by .github/workflows/update-cask.yml, which
-# the KubeAstra release workflow triggers on each `desktop-v*` tag. Editing
-# them by hand is fine but usually unnecessary.
+# version/sha256 are maintained by .github/workflows/update-cask.yml. It is
+# NOT yet triggered automatically — KubeAstra's release workflow sends no
+# repository_dispatch, so run it by hand after each desktop release:
+#   gh workflow run update-cask.yml --repo astraverse-io/homebrew-tap \
+#     -f version=<x.y.z>
 #
 cask "kubeastra" do
   version "0.2.0"
 
+  # arm64 only. There is no Intel build: PyInstaller cannot cross-compile
+  # and GitHub retired the Intel macOS runners (DESKTOP_APP_PLAN decision 2).
   on_arm do
     sha256 "2ceb2d6709fe787d7c38f5d739b6a135d95526997337db58506e9cb9cb44b8d8"
 
     url "https://github.com/astraverse-io/KubeAstra/releases/download/desktop-v#{version}/KubeAstra_#{version}_aarch64.dmg",
-        verified: "github.com/astraverse-io/KubeAstra/"
-  end
-  # Delete this block if the x64 build lane is dropped (see DESKTOP_APP_PLAN
-  # decision 2 — GitHub has been retiring Intel macOS runners and PyInstaller
-  # cannot cross-compile).
-  on_intel do
-    sha256 :no_check
-
-    url "https://github.com/astraverse-io/KubeAstra/releases/download/desktop-v#{version}/KubeAstra_#{version}_x64.dmg",
         verified: "github.com/astraverse-io/KubeAstra/"
   end
 
@@ -33,6 +28,7 @@ cask "kubeastra" do
     strategy :github_latest
   end
 
+  depends_on arch: :arm64
   depends_on macos: :big_sur
 
   app "KubeAstra.app"
