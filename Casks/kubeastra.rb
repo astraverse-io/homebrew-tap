@@ -10,12 +10,12 @@
 #     -f version=<x.y.z>
 #
 cask "kubeastra" do
-  version "0.2.0"
+  version "0.2.1"
 
   # arm64 only. There is no Intel build: PyInstaller cannot cross-compile
   # and GitHub retired the Intel macOS runners (DESKTOP_APP_PLAN decision 2).
   on_arm do
-    sha256 "2ceb2d6709fe787d7c38f5d739b6a135d95526997337db58506e9cb9cb44b8d8"
+    sha256 "e88133fd8d9908a0d5eb940c1fc79e9afece94c4f83ceb5a1b22fb6b7f3803a1"
 
     url "https://github.com/astraverse-io/KubeAstra/releases/download/desktop-v#{version}/KubeAstra_#{version}_aarch64.dmg",
         verified: "github.com/astraverse-io/KubeAstra/"
